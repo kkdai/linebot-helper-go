@@ -175,26 +175,6 @@ func TestServerRoutes(t *testing.T) {
 		t.Errorf("unexpected /audio response: %d %s", resp.StatusCode, resp.Header.Get("Content-Type"))
 	}
 	resp.Body.Close()
-
-	// 5. POST /hf validation
-	hfBad, _ := http.Post(ts.URL+"/hf", "application/json", strings.NewReader(`{"title":"T","url":"ftp://bad"}`))
-	if hfBad.StatusCode != http.StatusBadRequest {
-		t.Errorf("expected 400 for invalid /hf URL protocol, got %d", hfBad.StatusCode)
-	}
-	hfBad.Body.Close()
-
-	// 6. POST /urls validation & success
-	urlsEmpty, _ := http.Post(ts.URL+"/urls", "application/json", strings.NewReader(`{"title":"T","urls":[]}`))
-	if urlsEmpty.StatusCode != http.StatusBadRequest {
-		t.Errorf("expected 400 for empty /urls, got %d", urlsEmpty.StatusCode)
-	}
-	urlsEmpty.Body.Close()
-
-	urlsOK, _ := http.Post(ts.URL+"/urls", "application/json", strings.NewReader(`{"title":"T","urls":["https://example.com/1"]}`))
-	if urlsOK.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 for valid /urls, got %d", urlsOK.StatusCode)
-	}
-	urlsOK.Body.Close()
 }
 
 func TestWebhookSignatureAndAsyncAudioFlow(t *testing.T) {

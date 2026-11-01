@@ -129,10 +129,6 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("GET /ws/voice/{session_id}", s.handleVoiceWS)
 
-	mux.HandleFunc("POST /hn", s.handleHackerNews)
-	mux.HandleFunc("POST /hf", s.handleHuggingFace)
-	mux.HandleFunc("POST /urls", s.handleMultiURLs)
-
 	mux.HandleFunc("POST /api/gemini-callback/static", s.handleGeminiStaticWebhook)
 	mux.HandleFunc("POST /api/gemini-callback/dynamic", s.handleGeminiDynamicWebhook)
 
@@ -1058,97 +1054,6 @@ func (s *Server) handleReadAloudPostback(ctx context.Context, event line.Webhook
 	audioURL := fmt.Sprintf("%s/audio/%s", baseURL, audioID)
 	_ = s.LineClient.ReplyMessages(ctx, event.ReplyToken, []map[string]any{
 		line.NewAudioMessage(audioURL, durationMs),
-	})
-}
-
-func (s *Server) handleURLPushMessage(ctx context.Context, title string, urls []string, targetUserID, token string) {
-	var results []map[string]any
-	for _, rawURL := range urls {
-		content, err := s.Loader.LoadURL(ctx, rawURL, "normal")
-		if err != nil {
-			errMsg := line.FriendlyErrorMessage(err, rawURL)
-			results = append(results, line.NewTextMessage(fmt.Sprintf("%s\n%s\n\n%s", rawURL, title, errMsg), nil))
-			continue
-		}
-		if strings.TrimSpace(content) == "" {
-			results = append(results, line.NewTextMessage(fmt.Sprintf("%s\n%s\n\n⚠️ 無法從這個網址提取內容。", rawURL, title), nil))
-			continue
-		}
-		summary, err := ai.SummarizeText(ctx, s.GeminiClient, content, "normal")
-		if err != nil {
-			errMsg := line.FriendlyErrorMessage(err, rawURL)
-			results = append(results, line.NewTextMessage(fmt.Sprintf("%s\n%s\n\n%s", rawURL, title, errMsg), nil))
-			continue
-		}
-		results = append(results, line.NewTextMessage(fmt.Sprintf("%s\n%s\n\n%s", rawURL, title, summary), nil))
-	}
-
-	if len(results) > 0 && targetUserID != "" && token != "" {
-		client := s.LineClient.WithToken(token)
-		_ = client.PushMessages(ctx, targetUserID, results)
-	}
-}
-
-func (s *Server) handleHackerNews(w http.ResponseWriter, r *http.Request) {
-	var data struct {
-		Title    string `json:"title"`
-		URL      string `json:"url"`
-		StoryURL string `json:"StoryUrl"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	urls := []string{data.URL}
-	if data.StoryURL != "" {
-		urls = append(urls, data.StoryURL)
-	}
-	s.handleURLPushMessage(r.Context(), data.Title, urls, s.Config.LineUserID, s.Config.ChannelAccessToken)
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-}
-
-func (s *Server) handleHuggingFace(w http.ResponseWriter, r *http.Request) {
-	var data struct {
-		Title string `json:"title"`
-		URL   string `json:"url"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	u := strings.ReplaceAll(data.URL, "paperswithcode.com", "huggingface.co")
-	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
-		http.Error(w, `{"detail":"Invalid URL protocol"}`, http.StatusBadRequest)
-		return
-	}
-	s.handleURLPushMessage(r.Context(), data.Title, []string{u}, s.Config.LineUserID, s.Config.ChannelAccessTokenHF)
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-}
-
-func (s *Server) handleMultiURLs(w http.ResponseWriter, r *http.Request) {
-	var data struct {
-		Title string   `json:"title"`
-		URLs  []string `json:"urls"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	if len(data.URLs) == 0 {
-		http.Error(w, `{"detail":"urls must be a non-empty array"}`, http.StatusBadRequest)
-		return
-	}
-	if len(data.URLs) > 5 {
-		http.Error(w, `{"detail":"Maximum 5 URLs allowed"}`, http.StatusBadRequest)
-		return
-	}
-	s.handleURLPushMessage(r.Context(), data.Title, data.URLs, s.Config.LineUserID, s.Config.ChannelAccessToken)
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"status":         "ok",
-		"processed_urls": len(data.URLs),
 	})
 }
 
