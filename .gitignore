@@ -1,0 +1,26 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/server
+/linebot-helper-go
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Environment variables
+.env
+
+# Runtime temp files
+static/temp_batch_*.jsonl
+config/batch_jobs.json
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
