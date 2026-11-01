@@ -14,4 +14,5 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/JohannesKaufmann/dom v0.3.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 )
