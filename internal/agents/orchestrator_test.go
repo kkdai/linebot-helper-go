@@ -40,6 +40,13 @@ func TestDetectIntents(t *testing.T) {
 	orch, srv := newTestOrchestrator(t, func(w http.ResponseWriter, r *http.Request) {})
 	defer srv.Close()
 
+	if orch.ADKAgent == nil {
+		t.Fatal("expected Orchestrator.ADKAgent to be initialized with google.golang.org/adk")
+	}
+	if len(orch.ADKAgent.SubAgents()) != 5 {
+		t.Fatalf("expected 5 ADK sub-agents, got %d", len(orch.ADKAgent.SubAgents()))
+	}
+
 	tests := []struct {
 		msg      string
 		expected []IntentType
