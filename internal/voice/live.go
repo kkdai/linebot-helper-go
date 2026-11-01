@@ -72,6 +72,15 @@ func (s *SessionState) AddTurn(userSpeech, aiResponse string) {
 	s.Turns = append(s.Turns, Turn{UserSpeech: userSpeech, AIResponse: aiResponse})
 }
 
+// PopGoAway atomically reads and clears the GoAway flag.
+func (s *SessionState) PopGoAway() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v := s.GoAway
+	s.GoAway = false
+	return v
+}
+
 // BuildVoiceTools returns the Gemini Live tool declarations (Google Search + delegate_to_assistant + search_nearby_places).
 func BuildVoiceTools() []map[string]any {
 	return []map[string]any{
