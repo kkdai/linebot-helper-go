@@ -8,7 +8,8 @@ COPY go.mod go.sum* ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server . && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/trends-batch ./cmd/trends-batch
 
 # Stage 2: Runtime image with SingleFile (Node.js + Chromium) and ffmpeg
 FROM debian:bookworm-slim
@@ -29,6 +30,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /out/server /app/server
+COPY --from=builder /out/trends-batch /app/trends-batch
 COPY static /app/static
 
 EXPOSE 8080

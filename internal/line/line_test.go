@@ -61,3 +61,47 @@ func TestBuildSummaryBubble(t *testing.T) {
 		t.Errorf("expected 1 footer button when docID is empty, got %d", len(footerNoID))
 	}
 }
+
+func TestBuildGitHubTrendsCarousel(t *testing.T) {
+	items := []GitHubTrendFlexItem{
+		{
+			Rank:          1,
+			Name:          "google/adk-go",
+			URL:           "https://github.com/google/adk-go",
+			Language:      "Go",
+			TotalStars:    "12,345",
+			StarsAdded:    "2,100 stars this week",
+			Status:        "NEW",
+			AIHighlight:   "Google 官方 Agent Development Kit Go 版本",
+			Topics:        []string{"ai", "agent", "golang"},
+			License:       "Apache-2.0",
+			LatestRelease: "v1.9.0",
+		},
+		{
+			Rank:         2,
+			Name:         "kkdai/linebot-helper-go",
+			URL:          "https://github.com/kkdai/linebot-helper-go",
+			Language:     "Go",
+			TotalStars:   "888",
+			StarsAdded:   "300 stars this week",
+			Status:       "RISING",
+			PreviousRank: 5,
+			AIHighlight:  "整合 Gemini 與 ADK 的智慧 LINE Bot 助手",
+		},
+	}
+
+	carousel := BuildGitHubTrendsCarousel("2026-11-03", "本週以 AI Agent 框架最受矚目。", "https://example.com/reports/abc", items)
+	if carousel["type"] != "carousel" {
+		t.Fatalf("expected carousel type, got %v", carousel["type"])
+	}
+	contents, ok := carousel["contents"].([]any)
+	if !ok || len(contents) != 3 {
+		t.Fatalf("expected 3 bubbles (1 overview + 2 repos), got %d", len(contents))
+	}
+
+	overview := contents[0].(map[string]any)
+	ovFooter := overview["footer"].(map[string]any)["contents"].([]any)
+	if len(ovFooter) != 2 {
+		t.Errorf("expected 2 footer buttons on overview bubble when reportURL is set, got %d", len(ovFooter))
+	}
+}

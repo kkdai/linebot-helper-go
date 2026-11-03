@@ -24,6 +24,8 @@ LINE Bot 智能助手（Go 1.26 改寫版），整合 **Google ADK for Go (`goog
   - 結合 Maps Grounding 與 Google Search Grounding 蒐集餐廳評論，提交 Gemini Batch API 批次分析，支援 Static HMAC Webhook、Dynamic RS256 JWKS Webhook 與 60 秒背景輪詢
 - **LIFF 即時雙向語音助手**：
   - `/liff/` 前端與 `/ws/voice/{session_id}` WebSocket 雙向串流（`gemini-3.1-flash-live-preview`），支援 Push-to-Talk、免持自動 VAD、Barge-in 打斷、Session Resumption、Context Window Compression 與 Live Tool Calling
+- **GCP Batch 每週 GitHub Trending 追蹤與研析（`cmd/trends-batch`）**：
+  - 獨立批次執行檔（`/app/trends-batch`），實作五階段處理管線（GitHub Trending 爬蟲與 REST API 擴充 → GCS/Firestore 歷程差異比對 `NEW`/`RISING`/`CONTINUOUS` → Gemini 結構化趨勢研析 → 繁中 Markdown 與 `/reports/{report_id}` 網頁報告編譯 → LINE Flex Message Carousel 推播）
 
 ---
 
@@ -72,16 +74,17 @@ LINE Bot 智能助手（Go 1.26 改寫版），整合 **Google ADK for Go (`goog
 ```text
 .
 ├── main.go                          # 應用程式入口與 Graceful Shutdown
+├── cmd/trends-batch/main.go         # GCP Batch 每週 GitHub Trending 研析與 LINE Flex 推播 CLI
 ├── Dockerfile                       # Multi-stage Go 1.26 + Chromium/SingleFile + ffmpeg 映像檔
 ├── static/liff/                     # LIFF 即時語音助手前端資產
 └── internal/
     ├── config/                      # 環境變數載入與驗證
     ├── gemini/                      # Vertex AI & Developer API REST + TTS 客戶端
     ├── firestore/                   # Cloud Firestore REST v1 KVStore 與記憶體測試替身
-    ├── services/                    # SessionManager, BookmarkService, ReportStore, ReportPage, BatchService
+    ├── services/                    # SessionManager, BookmarkService, ReportStore, ReportPage, BatchService, TrendsBatchRunner
     ├── line/                        # LINE Messaging API Client, Webhook 簽章驗證, Flex Message 組裝
     ├── loader/                      # URL Fallback Chain, SingleFile, Firecrawl, 多格式文件解析
-    ├── ai/                          # 摘要、社群爆款文案、研究報告、YouTube、Vision、GitHub、Maps
+    ├── ai/                          # 摘要、社群爆款文案、研究報告、YouTube、Vision、GitHub、Maps、GitHub Trending
     ├── agents/                      # Google ADK (v1.9.0) Orchestrator 與 5 個專職 Agents
     ├── voice/                       # Gemini Live API BidiGenerateContent WebSocket Relay
     └── handlers/                    # HTTP 路由、非同步 Webhook 處理與 Postback 分派
@@ -93,6 +96,7 @@ LINE Bot 智能助手（Go 1.26 改寫版），整合 **Google ADK for Go (`goog
 go vet ./...
 go test -v ./...
 go build -o linebot-helper-go .
+go build -o trends-batch ./cmd/trends-batch
 ```
 
 ## 部署至 Cloud Run
