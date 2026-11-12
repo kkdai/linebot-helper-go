@@ -98,7 +98,7 @@ func LoadHTMLWithHTTP(ctx context.Context, rawURL string, toMarkdown bool, clien
 	return parsed, nil
 }
 
-// LoadHTMLWithFirecrawl scrapes a URL using the Firecrawl v1 API.
+// LoadHTMLWithFirecrawl scrapes a URL using the Firecrawl v2 API (POST /v2/scrape).
 func LoadHTMLWithFirecrawl(ctx context.Context, rawURL, apiKey, firecrawlBaseURL string, toMarkdown bool, client *http.Client) (string, error) {
 	if apiKey == "" {
 		return "", fmt.Errorf("firecrawl_key environment variable not set")
@@ -145,7 +145,7 @@ func LoadHTMLWithFirecrawl(ctx context.Context, rawURL, apiKey, firecrawlBaseURL
 	if err != nil {
 		return "", err
 	}
-	endpoint := strings.TrimRight(firecrawlBaseURL, "/") + "/v1/scrape"
+	endpoint := strings.TrimRight(firecrawlBaseURL, "/") + "/v2/scrape"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return "", err
@@ -165,6 +165,8 @@ func LoadHTMLWithFirecrawl(ctx context.Context, rawURL, apiKey, firecrawlBaseURL
 	}
 
 	var result struct {
+		Success  *bool  `json:"success"`
+		Error    string `json:"error"`
 		Markdown string `json:"markdown"`
 		HTML     string `json:"html"`
 		Data     *struct {
@@ -174,6 +176,9 @@ func LoadHTMLWithFirecrawl(ctx context.Context, rawURL, apiKey, firecrawlBaseURL
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
+	}
+	if result.Success != nil && !*result.Success {
+		return "", fmt.Errorf("firecrawl scrape failed: %s", result.Error)
 	}
 
 	md := result.Markdown
